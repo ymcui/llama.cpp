@@ -16,7 +16,7 @@
 
 constexpr int kVecSize = 1 << 18;
 
-float drawFromGaussianPdf(std::mt19937& rndm) {
+static float drawFromGaussianPdf(std::mt19937& rndm) {
     constexpr double kScale = 1./(1. + std::mt19937::max());
     constexpr double kTwoPiTimesScale = 6.28318530717958647692*kScale;
     static float lastX;
@@ -28,7 +28,8 @@ float drawFromGaussianPdf(std::mt19937& rndm) {
     haveX = true;
     return r*cos(phi);
 }
-void fillRandomGaussianFloats(std::vector<float>& values, std::mt19937& rndm, float mean = 0) {
+
+static void fillRandomGaussianFloats(std::vector<float>& values, std::mt19937& rndm, float mean = 0) {
     for (auto& v : values) v = mean + drawFromGaussianPdf(rndm);
 }
 
@@ -242,7 +243,6 @@ int main(int argc, char** argv) {
     if (useQ4_1) q41.resize(n4);
     else q40.resize(n4);
     std::vector<block_q8_0> q8(n8);
-    std::vector<int64_t> H(16, 0);
     double sumt = 0, sumt2 = 0, maxt = 0;
     double sumqt = 0, sumqt2 = 0, maxqt = 0;
     double sum = 0, sumq = 0, exactSum = 0;

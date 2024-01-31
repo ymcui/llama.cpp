@@ -12,9 +12,10 @@ FROM ${BASE_CUDA_DEV_CONTAINER} as build
 ARG CUDA_DOCKER_ARCH=all
 
 RUN apt-get update && \
-    apt-get install -y build-essential python3 python3-pip
+    apt-get install -y build-essential python3 python3-pip git
 
-COPY requirements.txt requirements.txt
+COPY requirements.txt   requirements.txt
+COPY requirements       requirements
 
 RUN pip install --upgrade pip setuptools wheel \
     && pip install -r requirements.txt
