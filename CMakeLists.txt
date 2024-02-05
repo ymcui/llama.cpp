@@ -79,7 +79,7 @@ if (NOT MSVC)
 endif()
 
 if (WIN32)
-    option(LLAMA_WIN_VER                     "llama: Windows Version"                           0x602)
+    set(LLAMA_WIN_VER "0x602" CACHE STRING "llama: Windows Version")
 endif()
 
 # 3rd party libs
@@ -100,6 +100,10 @@ option(LLAMA_HIPBLAS                         "llama: use hipBLAS"               
 option(LLAMA_HIP_UMA                         "llama: use HIP unified memory architecture"       OFF)
 option(LLAMA_CLBLAST                         "llama: use CLBlast"                               OFF)
 option(LLAMA_VULKAN                          "llama: use Vulkan"                                OFF)
+option(LLAMA_VULKAN_CHECK_RESULTS            "llama: run Vulkan op checks"                      OFF)
+option(LLAMA_VULKAN_DEBUG                    "llama: enable Vulkan debug output"                OFF)
+option(LLAMA_VULKAN_VALIDATE                 "llama: enable Vulkan validation"                  OFF)
+option(LLAMA_VULKAN_RUN_TESTS                "llama: run Vulkan tests"                          OFF)
 option(LLAMA_METAL                           "llama: use Metal"                                 ${LLAMA_METAL_DEFAULT})
 option(LLAMA_METAL_NDEBUG                    "llama: disable Metal debugging"                   OFF)
 option(LLAMA_METAL_SHADER_DEBUG              "llama: compile Metal with -fno-fast-math"         OFF)
@@ -423,16 +427,29 @@ if (LLAMA_VULKAN)
     if (Vulkan_FOUND)
         message(STATUS "Vulkan found")
 
-        set(GGML_HEADERS_VULKAN ggml-vulkan.h)
-        set(GGML_SOURCES_VULKAN ggml-vulkan.cpp)
-
-        add_library(ggml-vulkan STATIC ggml-vulkan.cpp ggml-vulkan.h)
+        add_library(ggml-vulkan OBJECT ggml-vulkan.cpp ggml-vulkan.h)
         if (BUILD_SHARED_LIBS)
             set_target_properties(ggml-vulkan PROPERTIES POSITION_INDEPENDENT_CODE ON)
         endif()
         target_link_libraries(ggml-vulkan PRIVATE Vulkan::Vulkan)
 
         add_compile_definitions(GGML_USE_VULKAN)
+
+        if (LLAMA_VULKAN_CHECK_RESULTS)
+            target_compile_definitions(ggml-vulkan PRIVATE GGML_VULKAN_CHECK_RESULTS)
+        endif()
+
+        if (LLAMA_VULKAN_DEBUG)
+            target_compile_definitions(ggml-vulkan PRIVATE GGML_VULKAN_DEBUG)
+        endif()
+
+        if (LLAMA_VULKAN_VALIDATE)
+            target_compile_definitions(ggml-vulkan PRIVATE GGML_VULKAN_VALIDATE)
+        endif()
+
+        if (LLAMA_VULKAN_RUN_TESTS)
+            target_compile_definitions(ggml-vulkan PRIVATE GGML_VULKAN_RUN_TESTS)
+        endif()
 
         set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS} ggml-vulkan)
     else()
@@ -1012,7 +1029,6 @@ add_library(ggml OBJECT
             ggml-quants.h
             ${GGML_SOURCES_CUDA}    ${GGML_HEADERS_CUDA}
             ${GGML_SOURCES_OPENCL}  ${GGML_HEADERS_OPENCL}
-            ${GGML_SOURCES_VULKAN}  ${GGML_HEADERS_VULKAN}
             ${GGML_SOURCES_METAL}   ${GGML_HEADERS_METAL}
             ${GGML_SOURCES_MPI}     ${GGML_HEADERS_MPI}
             ${GGML_SOURCES_EXTRA}   ${GGML_HEADERS_EXTRA}
@@ -1094,7 +1110,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/LlamaConfig.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Llama)
 
 set(GGML_PUBLIC_HEADERS "ggml.h" "ggml-alloc.h" "ggml-backend.h"
-        "${GGML_HEADERS_CUDA}" "${GGML_HEADERS_OPENCL}" "${GGML_HEADERS_VULKAN}"
+        "${GGML_HEADERS_CUDA}" "${GGML_HEADERS_OPENCL}"
         "${GGML_HEADERS_METAL}" "${GGML_HEADERS_MPI}" "${GGML_HEADERS_EXTRA}")
 
 set_target_properties(ggml PROPERTIES PUBLIC_HEADER "${GGML_PUBLIC_HEADERS}")

@@ -109,6 +109,7 @@ MK_NVCCFLAGS  += -O3
 else
 MK_CFLAGS     += -O3
 MK_CXXFLAGS   += -O3
+MK_NVCCFLAGS  += -O3
 endif
 
 # clock_gettime came in POSIX.1b (1993)
@@ -365,7 +366,7 @@ ifdef LLAMA_CUBLAS
 	MK_CPPFLAGS  += -DGGML_USE_CUBLAS -I/usr/local/cuda/include -I/opt/cuda/include -I$(CUDA_PATH)/targets/x86_64-linux/include -I/usr/local/cuda/targets/aarch64-linux/include
 	MK_LDFLAGS   += -lcuda -lcublas -lculibos -lcudart -lcublasLt -lpthread -ldl -lrt -L/usr/local/cuda/lib64 -L/opt/cuda/lib64 -L$(CUDA_PATH)/targets/x86_64-linux/lib -L/usr/local/cuda/targets/aarch64-linux/lib -L/usr/lib/wsl/lib
 	OBJS         += ggml-cuda.o
-	MK_NVCCFLAGS  = -use_fast_math
+	MK_NVCCFLAGS += -use_fast_math
 ifndef JETSON_EOL_MODULE_DETECT
 	MK_NVCCFLAGS += --forward-unknown-to-host-compiler
 endif # JETSON_EOL_MODULE_DETECT
@@ -457,6 +458,18 @@ ifdef LLAMA_VULKAN_CHECK_RESULTS
 	MK_CPPFLAGS  += -DGGML_VULKAN_CHECK_RESULTS
 endif
 
+ifdef LLAMA_VULKAN_DEBUG
+	MK_CPPFLAGS  += -DGGML_VULKAN_DEBUG
+endif
+
+ifdef LLAMA_VULKAN_VALIDATE
+	MK_CPPFLAGS  += -DGGML_VULKAN_VALIDATE
+endif
+
+ifdef LLAMA_VULKAN_RUN_TESTS
+	MK_CPPFLAGS  += -DGGML_VULKAN_RUN_TESTS
+endif
+
 ggml-vulkan.o: ggml-vulkan.cpp ggml-vulkan.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 endif # LLAMA_VULKAN
@@ -540,8 +553,11 @@ $(info I CFLAGS:    $(CFLAGS))
 $(info I CXXFLAGS:  $(CXXFLAGS))
 $(info I NVCCFLAGS: $(NVCCFLAGS))
 $(info I LDFLAGS:   $(LDFLAGS))
-$(info I CC:        $(shell $(CC) --version | head -n 1))
-$(info I CXX:       $(shell $(CXX) --version | head -n 1))
+$(info I CC:        $(shell $(CC)   --version | head -n 1))
+$(info I CXX:       $(shell $(CXX)  --version | head -n 1))
+ifdef LLAMA_CUBLAS
+$(info I NVCC:      $(shell $(NVCC) --version | tail -n 1))
+endif # LLAMA_CUBLAS
 $(info )
 
 #
@@ -586,8 +602,11 @@ train.o: common/train.cpp common/train.h
 libllama.so: llama.o ggml.o $(OBJS)
 	$(CXX) $(CXXFLAGS) -shared -fPIC -o $@ $^ $(LDFLAGS)
 
+libllama.a: llama.o ggml.o $(OBJS) $(COMMON_DEPS)
+	ar rcs libllama.a llama.o ggml.o $(OBJS) $(COMMON_DEPS)
+
 clean:
-	rm -vrf *.o tests/*.o *.so *.dll benchmark-matmult common/build-info.cpp *.dot $(COV_TARGETS) $(BUILD_TARGETS) $(TEST_TARGETS)
+	rm -vrf *.o tests/*.o *.so *.a *.dll benchmark-matmult common/build-info.cpp *.dot $(COV_TARGETS) $(BUILD_TARGETS) $(TEST_TARGETS)
 
 #
 # Examples
